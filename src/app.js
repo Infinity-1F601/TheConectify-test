@@ -3,20 +3,15 @@
 const express = require('express');
 const cors = require('cors');
 
-
 const app = express();
 
-// CORS конфіг
+// Відкрити CORS для будь-якого походження (будь-хто може підключатися)
 const corsOptions = {
-  origin: [
-    'https://the-conectify-client.vercel.app',
-    'http://localhost:3000'
-  ],
-  credentials: true,
+  origin: '*',  // <-- дозвіл для всіх
+  credentials: false,  // При origin: '*', credentials мають бути false
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 };
-
 
 // Middleware
 app.use(cors(corsOptions));
@@ -24,13 +19,13 @@ app.options('*', cors(corsOptions)); // для preflight
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// 🔄 Логування кожного запиту (для дебагу, можеш вимкнути потім)
+// Логування кожного запиту (можеш вимкнути пізніше)
 app.use((req, res, next) => {
   console.log(`[${req.method}] ${req.originalUrl}`);
   next();
 });
 
-// Роути
+// Тут додай свої роутери
 
 // Обробка 404
 app.use((req, res) => {
@@ -43,4 +38,4 @@ app.use((err, req, res, next) => {
   res.status(500).json({ message: 'Внутрішня помилка сервера', error: err.message });
 });
 
-module.exports = app
+module.exports = app;
