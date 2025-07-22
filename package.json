@@ -1,0 +1,57 @@
+{
+  "name": "page-server",
+  "version": "1.0.0",
+  "main": "Server.js",
+  "scripts": {
+    "start": "node Server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "axion": "^0.1.0",
+    "b": "^2.0.1",
+    "bcryptjs": "^3.0.2",
+    "cloudinary": "^2.7.0",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "express-validator": "^7.2.1",
+    "helmet": "^8.0.0",
+    "ioredis": "^5.6.1",
+    "jsonwebtoken": "^9.0.2",
+    "jwt-decode": "^4.0.0",
+    "morgan": "^1.10.0",
+    "multer": "^1.4.5-lts.1",
+    "mysql": "^2.18.1",
+    "mysql2": "^3.12.0",
+    "npx": "^10.2.2",
+    "pg": "^8.16.0",
+    "postgres": "^3.4.7",
+    "psql": "^0.0.1",
+    "redis": "^4.7.0",
+    "sequelize": "^6.37.5",
+    "socket.io": "^4.8.1",
+    "uuid": "^11.1.0",
+    "ws": "^8.18.3"
+  },
+  "description": "TheConectify — це соціальна мережа для швидкого пошуку користувачів і драйвового живого спілкування. Серверна частина написана на Node.js з використанням Express, WebSocket та PostgreSQL.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Infinity-1F601/TheConectify-Server.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Infinity-1F601/TheConectify-Server/issues"
+  },
+  "homepage": "https://github.com/Infinity-1F601/TheConectify-Server#readme",
+  "devDependencies": {
+    "@types/express": "^5.0.3",
+    "@types/node": "^24.0.3",
+    "@types/pg": "^8.15.4",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3"
+  }
+}
