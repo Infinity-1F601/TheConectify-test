@@ -172,7 +172,7 @@ function WebSocketFriend() {
               sessionId: msg.sessionId,
               message: 'Сесія повна',
             });
-            return;
+           
           }
 
           send(ws, {
