@@ -4,9 +4,9 @@ const { v4: uuidv4 } = require('uuid');
 function WebSocketFriend() {
   const wss = new WebSocket.Server({ noServer: true });
 
-  const queue = []; // Очікування на співрозмовника
-  const sessions = new Map(); // Map<ws, { partner, sessionId }>
-  const activeSessions = new Map(); // Map<sessionId, { user1, user2, created }>
+  const queue = [];
+  const sessions = new Map();
+  const activeSessions = new Map();
 
   function countCommonCategories(arr1, arr2) {
     const set2 = new Set(arr2);
@@ -22,16 +22,28 @@ function WebSocketFriend() {
   function findBySessionId(sessionId) {
     const sessionData = activeSessions.get(sessionId);
     if (!sessionData) return null;
-    
-    // Перевіряємо, чи є активні учасники в сесії
+
     const user1Active = sessionData.user1 && sessionData.user1.readyState === WebSocket.OPEN;
     const user2Active = sessionData.user2 && sessionData.user2.readyState === WebSocket.OPEN;
-    
-    if (!user1Active && !user2Active) {
-      activeSessions.delete(sessionId);
-      return null;
+
+    if (!user1Active) sessionData.user1 = null;
+    if (!user2Active) sessionData.user2 = null;
+
+    if (!sessionData.user1 && !sessionData.user2) {
+      // Встановлюємо таймер на видалення через 2 хвилини
+      setTimeout(() => {
+        const latest = activeSessions.get(sessionId);
+        if (
+          latest &&
+          (!latest.user1 || latest.user1.readyState !== WebSocket.OPEN) &&
+          (!latest.user2 || latest.user2.readyState !== WebSocket.OPEN)
+        ) {
+          activeSessions.delete(sessionId);
+          console.log(`🗑️ Сесію ${sessionId} видалено через неактивність`);
+        }
+      }, 2 * 60 * 1000);
     }
-    
+
     return sessionData;
   }
 
@@ -41,24 +53,32 @@ function WebSocketFriend() {
 
     const sessionData = activeSessions.get(session.sessionId);
     if (sessionData) {
-      // Повідомляємо партнера про відключення
-      if (sessionData.user1 === ws && sessionData.user2 && sessionData.user2.readyState === WebSocket.OPEN) {
+      if (sessionData.user1 === ws && sessionData.user2?.readyState === WebSocket.OPEN) {
         send(sessionData.user2, { type: 'partner-disconnected' });
         sessions.delete(sessionData.user2);
-      } else if (sessionData.user2 === ws && sessionData.user1 && sessionData.user1.readyState === WebSocket.OPEN) {
+      } else if (sessionData.user2 === ws && sessionData.user1?.readyState === WebSocket.OPEN) {
         send(sessionData.user1, { type: 'partner-disconnected' });
         sessions.delete(sessionData.user1);
       }
-      
-      // Видаляємо сесію, якщо обидва учасники відключились
-      const user1Active = sessionData.user1 && sessionData.user1.readyState === WebSocket.OPEN;
-      const user2Active = sessionData.user2 && sessionData.user2.readyState === WebSocket.OPEN;
-      
-      if (!user1Active && !user2Active) {
-        activeSessions.delete(session.sessionId);
+
+      if (sessionData.user1 === ws) sessionData.user1 = null;
+      if (sessionData.user2 === ws) sessionData.user2 = null;
+
+      if (!sessionData.user1 && !sessionData.user2) {
+        setTimeout(() => {
+          const latest = activeSessions.get(session.sessionId);
+          if (
+            latest &&
+            (!latest.user1 || latest.user1.readyState !== WebSocket.OPEN) &&
+            (!latest.user2 || latest.user2.readyState !== WebSocket.OPEN)
+          ) {
+            activeSessions.delete(session.sessionId);
+            console.log(`🗑️ Сесію ${session.sessionId} видалено через неактивність`);
+          }
+        }, 2 * 60 * 1000);
       }
     }
-    
+
     sessions.delete(ws);
   }
 
@@ -89,17 +109,14 @@ function WebSocketFriend() {
 
           if (bestMatch) {
             queue.splice(queue.indexOf(bestMatch), 1);
-
             const sessionId = uuidv4();
-            
-            // Створюємо сесію в activeSessions
+
             activeSessions.set(sessionId, {
               user1: bestMatch.ws,
               user2: ws,
-              created: Date.now()
+              created: Date.now(),
             });
-            
-            // Додаємо інформацію про сесію для кожного учасника
+
             sessions.set(ws, { partner: bestMatch.ws, sessionId });
             sessions.set(bestMatch.ws, { partner: ws, sessionId });
 
@@ -135,44 +152,28 @@ function WebSocketFriend() {
             return;
           }
 
-          // Перевіряємо, чи клієнт вже є учасником цієї сесії
-          if (sessionData.user1 === ws || sessionData.user2 === ws) {
-            send(ws, {
-              type: 'session-joined',
-              sessionId: msg.sessionId,
-              message: 'Ви вже в цій сесії',
-            });
-            return;
-          }
-
-          // Якщо є вільне місце в сесії
+          // Призначаємо ws у вільне місце
           if (!sessionData.user1 || sessionData.user1.readyState !== WebSocket.OPEN) {
             sessionData.user1 = ws;
-            const partner = sessionData.user2;
-            sessions.set(ws, { partner, sessionId: msg.sessionId });
-            if (partner && partner.readyState === WebSocket.OPEN) {
-              const partnerSession = sessions.get(partner);
-              if (partnerSession) {
-                partnerSession.partner = ws;
-              }
-            }
           } else if (!sessionData.user2 || sessionData.user2.readyState !== WebSocket.OPEN) {
             sessionData.user2 = ws;
-            const partner = sessionData.user1;
-            sessions.set(ws, { partner, sessionId: msg.sessionId });
-            if (partner && partner.readyState === WebSocket.OPEN) {
-              const partnerSession = sessions.get(partner);
-              if (partnerSession) {
-                partnerSession.partner = ws;
-              }
-            }
           } else {
             send(ws, {
               type: 'session-full',
               sessionId: msg.sessionId,
               message: 'Сесія повна',
             });
-           
+            return;
+          }
+
+          const partner = sessionData.user1 === ws ? sessionData.user2 : sessionData.user1;
+          sessions.set(ws, { partner, sessionId: msg.sessionId });
+
+          if (partner && partner.readyState === WebSocket.OPEN) {
+            const partnerSession = sessions.get(partner);
+            if (partnerSession) {
+              partnerSession.partner = ws;
+            }
           }
 
           send(ws, {
@@ -200,10 +201,8 @@ function WebSocketFriend() {
             timestamp: Date.now(),
           };
 
-          // Надсилаємо відправнику
           send(ws, { ...messageWithMeta, from: 'you' });
 
-          // Надсилаємо партнеру
           if (session.partner && session.partner.readyState === WebSocket.OPEN) {
             send(session.partner, { ...messageWithMeta, from: 'partner' });
           }
@@ -221,13 +220,12 @@ function WebSocketFriend() {
         }
 
         else if (msg.type === 'close server') {
-          // Видаляємо з черги
           const index = queue.findIndex((entry) => entry.ws === ws);
           if (index !== -1) {
             queue.splice(index, 1);
             console.log('🗑️ Видалено з черги');
           }
-          
+
           cleanupSession(ws);
         }
 
@@ -243,14 +241,11 @@ function WebSocketFriend() {
 
     ws.on('close', () => {
       console.log('🔴 Клієнт відключився');
-
-      // Видаляємо з черги
       const index = queue.findIndex((entry) => entry.ws === ws);
       if (index !== -1) {
         queue.splice(index, 1);
         console.log('🗑️ Видалено з черги');
       }
-
       cleanupSession(ws);
     });
 
@@ -260,7 +255,6 @@ function WebSocketFriend() {
   });
 
   console.log('✅ WebSocket сервер запущено');
-
   return wss;
 }
 
