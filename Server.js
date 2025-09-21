@@ -20,9 +20,10 @@ server.on('upgrade', (req, socket, head) => {
       socket.destroy();
     }
   });
-  
 
-server.listen(5000, () => {
-  console.log(`Server started on port ${5000}`);
+const port = PORT | 8000
+
+server.listen(port , () => {
+  console.log(`Server started on port ${port}`);
 });
 
