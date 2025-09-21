@@ -21,7 +21,7 @@ server.on('upgrade', (req, socket, head) => {
     }
   });
 
-const port = PORT | 8000
+const port = 8000
 
 server.listen(port , () => {
   console.log(`Server started on port ${port}`);
