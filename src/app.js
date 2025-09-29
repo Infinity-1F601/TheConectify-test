@@ -13,6 +13,9 @@ const corsOptions = {
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 };
 
+
+
+
 // Middleware
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions)); // для preflight
@@ -26,6 +29,10 @@ app.use((req, res, next) => {
 });
 
 // Тут додай свої роутери
+
+app.get("/ping", (req, res) => {
+  res.json({ status: "ok", time: Date.now()})
+})
 
 // Обробка 404
 app.use((req, res) => {
